@@ -185,25 +185,30 @@ void heightmap(void)
     }
 }
 
-float percentColour(float height)
-{
-    return (height - minHeight) / (maxHeight - minHeight); // (1,0,0) => (0,1,0) => (0,0,1)
-}
-
 void setVertex(int x, int z)
 {
     float y = heights[x + SIZE / 2][z + SIZE / 2]; // y is height
     float r, g, b;
     if (!isWireframe)
     {
-        r = (y - minHeight) / (maxHeight - minHeight);
-        g = (1 - r) / 2;
-        b = (1 - r) / 2;
+        float percent = (y - minHeight) / (maxHeight - minHeight);
+        if (percent > 0.5) // from yellow (low) to red (hight)
+        {
+            r = 1;
+            g = 1 - (percent - 0.5) * 2;
+            b = 0;
+        }
+        else // from green (low) to yellow (high)
+        {
+            r = percent * 2;
+            g = 1;
+            b = 0;
+        }
         glColor3f(r, g, b);
     }
     else
     {
-        glColor3f(1, 1, 1);
+        glColor3f(1, 1, 1); // white colour for wireframe in mode 3
     }
     glNormal3fv(normals[x + SIZE / 2][z + SIZE / 2]); // Normals
     glVertex3f(x, y, z);
