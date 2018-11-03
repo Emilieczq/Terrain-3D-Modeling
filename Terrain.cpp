@@ -1,3 +1,7 @@
+/**
+ * Created by Zhenqi
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -13,65 +17,59 @@
 #include <GL/freeglut.h>
 #endif
 
-/**
- * camera location
- */
 float camPos[] = {0, 0, 200};
 int angleX = 44;
 int angleY = -20;
 int angleZ = 0;
-const int SIZE = 150;
-float height[SIZE][SIZE]; //[x][y], float value is the height in the point (x,y)
+const int SIZE = 100;         // terrain's size is 100 * 100
+float heights[SIZE][SIZE];    // [x][z], float value is the height (y) of the point (x, z)
+float normals[SIZE][SIZE][3]; // normal vertices
 bool definedHeights = false;
 float minHeight = 0;
 float maxHeight = 0;
-int circles[100][4];
-int mode = 1; // 1 = solid polygons; 2 = wireframe; 3 = solid polygons & wireframe
-bool isWireframe = false;
-bool lightsOn = true;
-bool shadingFlat = false;
-bool isQuad = true;
+const int ITERATIONS = 50;
+int circles[ITERATIONS][4]; // used for circle algorithm
+int mode = 1;               // 1 = solid polygons; 2 = wireframe; 3 = solid polygons & wireframe
+bool isWireframe = false;   // used for mode 3 to draw wireframe
+bool lightsOn = true;       // true: turn on two lights; false: turn off lights
+bool shadingFlat = false;   // true: flat shading; false: Gouraud shading
+bool isQuad = true;         // true: wireframe is quad; false: triangle
+bool isCircleAlgo = true;   // true: use circle algorithm; false: use fault algorithm
 
 /* lighting 1 */
 float light_pos0[] = {150, -1000, 150, 1};
 float amb0[] = {0.1, 0.1, 0.1, 1};
 float diff0[] = {0.8, 0.8, 0.8, 1};
-float spec0[] = {0.5, 0.5, 0, 1};
+float spec0[] = {0.5, 0.5, 0.5, 1};
 /* lighting 2 */
 float light_pos1[] = {-150, -1000, -150, 1};
 float amb1[] = {0.1, 0.1, 0.1, 1};
 float diff1[] = {0.8, 0.8, 0.8, 1};
-float spec1[] = {0, 0, 0.5, 1};
-
-// float m_amb[] = {0.19125, 0.0735, 0.0225, 1};
-// float m_diff[] = {0.7038, 0.27048, 0.0828, 1};
-// float m_spec[] = {0.256777, 0.137622, 0.086014, 1};
-// float shiny = 27;
-
-float m_amb[] = {0.83, 0.52, 0.63, 1.0};
-    float m_diff[] = {0.28, 0.87, 0.11, 1.0};
-    float m_spec[] = {0.99, 0.91, 0.81, 1.0};
-    float shiny = 27;
-
-void randCircles()
-{
-    srand(time(NULL));
-    for (int i = 0; i < 50; i++) // 50 interations
-    {
-        circles[i][0] = rand() % (SIZE - 1); // circle vertex x
-        circles[i][1] = rand() % (SIZE - 1); // circle vertex y
-        circles[i][2] = rand() % 50 - 25;    // disp
-        circles[i][3] = rand() % 10 + 40;    // terrainCircleSize
-    }
-}
+float spec1[] = {0.5, 0.5, 0.5, 1};
+/* materials for lighting */
+float m_amb[] = {0.19125, 0.0735, 0.0225, 1};
+float m_diff[] = {0.7038, 0.27048, 0.0828, 1};
+float m_spec[] = {0.256777, 0.137622, 0.086014, 1};
+float shiny = 0.3;
 
 /**
- * heightmap generation algorithm
+ * heightmap generation algorithm: Circle algorithm
  * for each terrain point (tx,tz) do
  *	pd = distance from circle center * 2 / terrainCircleSize
  *	if fabs(pd) <= 1.0
  *		height(tx,tz) +=  disp/2 + cos(pd*3.14)*disp/2;
  */
+void randCircles()
+{
+    srand(time(NULL));
+    for (int i = 0; i < ITERATIONS; i++) // 50 iterations
+    {
+        circles[i][0] = rand() % (SIZE - 1); // circle vertex x
+        circles[i][1] = rand() % (SIZE - 1); // circle vertex y
+        circles[i][2] = rand() % 30 - 15;    // disp: random -15 ~ 15
+        circles[i][3] = rand() % 10 + 10;    // terrainCircleSize random 10 ~ 20
+    }
+}
 void circleAlgo(int xc, int zc, int disp, int terrainCircleSize)
 {
     for (int x = 0; x <= SIZE - 1; x++)
@@ -81,7 +79,35 @@ void circleAlgo(int xc, int zc, int disp, int terrainCircleSize)
             float pd = sqrt(pow(xc - x, 2) + pow(zc - z, 2)) / terrainCircleSize;
             if (fabs(pd) <= 1.0)
             {
-                height[x][z] += disp / 2 + cos(pd * 3.14) * disp / 2;
+                heights[x][z] += disp / 2 + cos(pd * 3.14) * disp / 2;
+            }
+        }
+    }
+}
+
+/**
+ * heightmap generation algorithm: Fault algorithm
+ */
+void faultAlgo()
+{
+    for (int i = 0; i < 200; i++)
+    {
+        float r = static_cast<float>(rand());
+        float d = sqrt(SIZE * SIZE + SIZE * SIZE);
+        float c = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * d - d / 2;
+
+        for (int x = 0; x < SIZE; x++)
+        {
+            for (int z = 0; z < SIZE; z++)
+            {
+                if (sin(r) * x + cos(r) * z - c > 0)
+                {
+                    heights[x][z]++;
+                }
+                else
+                {
+                    heights[x][z]--;
+                }
             }
         }
     }
@@ -93,7 +119,36 @@ void resetHeightmap(void)
     {
         for (int z = 0; z <= SIZE - 1; z++)
         {
-            height[x][z] = 0;
+            heights[x][z] = 0;
+        }
+    }
+}
+
+void defineNormals()
+{
+    float v1[3];
+    float v2[3];
+    float v[3];
+    for (int x = 0; x < SIZE; x++)
+    {
+        for (int z = 0; z < SIZE; z++)
+        {
+            v1[0] = x + 1;
+            v1[1] = heights[x + 1][z] - heights[x][z];
+            v1[2] = z;
+
+            v2[0] = x + 1;
+            v2[1] = heights[x + 1][z + 1] - heights[x][z];
+            v2[2] = z + 1;
+
+            v[0] = v1[1] * v2[2] - v1[2] * v2[1];
+            v[1] = v1[2] * v2[0] - v1[0] * v2[2];
+            v[2] = v1[0] * v2[1] - v1[1] * v2[0];
+            float l = sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+
+            normals[x][z][0] = v[0] / l;
+            normals[x][z][1] = v[1] / l;
+            normals[x][z][2] = v[2] / l;
         }
     }
 }
@@ -101,23 +156,33 @@ void resetHeightmap(void)
 void heightmap(void)
 {
     resetHeightmap();
-    randCircles();
-    for (int i = 0; i < 100; i++)
+    if (isCircleAlgo)
     {
-        circleAlgo(circles[i][0], circles[i][1], circles[i][2], circles[i][3]);
+        randCircles();
+        for (int i = 0; i < 100; i++)
+        {
+            circleAlgo(circles[i][0], circles[i][1], circles[i][2], circles[i][3]);
+        }
     }
+    else
+    {
+        faultAlgo();
+    }
+    definedHeights = true; // to avoid the duplication of heightmap algorithm
+
+    defineNormals();
+
     /* define min height and max height*/
     for (int i = 0; i < 50; i++)
     {
         for (int j = 0; j < 50; j++)
         {
-            if (height[i][j] < minHeight)
-                minHeight = height[i][j];
-            else if (height[i][j] > maxHeight)
-                maxHeight = height[i][j];
+            if (heights[i][j] < minHeight)
+                minHeight = heights[i][j];
+            else if (heights[i][j] > maxHeight)
+                maxHeight = heights[i][j];
         }
     }
-    definedHeights = true;
 }
 
 float percentColour(float height)
@@ -127,7 +192,7 @@ float percentColour(float height)
 
 void setVertex(int x, int z)
 {
-    float y = height[x + SIZE / 2][z + SIZE / 2]; // y is height
+    float y = heights[x + SIZE / 2][z + SIZE / 2]; // y is height
     float r, g, b;
     if (!isWireframe)
     {
@@ -140,7 +205,7 @@ void setVertex(int x, int z)
     {
         glColor3f(1, 1, 1);
     }
-    glNormal3f(1, 1, 1); // Normals
+    glNormal3fv(normals[x + SIZE / 2][z + SIZE / 2]); // Normals
     glVertex3f(x, y, z);
 }
 
@@ -188,14 +253,14 @@ void display(void)
     if (lightsOn)
     {
         glLightfv(GL_LIGHT0, GL_POSITION, light_pos0);
-        // glLightfv(GL_LIGHT0, GL_AMBIENT, amb0);
-        // glLightfv(GL_LIGHT0, GL_DIFFUSE, diff0);
-        // glLightfv(GL_LIGHT0, GL_SPECULAR, spec0);
+        glLightfv(GL_LIGHT0, GL_AMBIENT, amb0);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, diff0);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, spec0);
 
         glLightfv(GL_LIGHT1, GL_POSITION, light_pos1);
-        // glLightfv(GL_LIGHT1, GL_AMBIENT, amb1);
-        // glLightfv(GL_LIGHT1, GL_DIFFUSE, diff1);
-        // glLightfv(GL_LIGHT1, GL_SPECULAR, spec1);
+        glLightfv(GL_LIGHT1, GL_AMBIENT, amb1);
+        glLightfv(GL_LIGHT1, GL_DIFFUSE, diff1);
+        glLightfv(GL_LIGHT1, GL_SPECULAR, spec1);
     }
     glPopMatrix();
     if (!definedHeights)
@@ -237,7 +302,7 @@ void display(void)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         drawTerrain();
     }
-    
+
     glPopMatrix();
     glutSwapBuffers();
 }
@@ -253,10 +318,12 @@ void reshape(int w, int h)
     glViewport(0, 0, w, h);
 }
 
-void mouse(int btn, int state, int x, int y){
-	if(btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN){
-		printf("left button, %i, %i\n", x, y);
-	}
+void mouse(int btn, int state, int x, int y)
+{
+    if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+    {
+        printf("left button, %i, %i\n", x, y);
+    }
 }
 
 void special(int key, int x, int y)
@@ -358,6 +425,10 @@ void keyboard(unsigned char key, int xIn, int yIn)
     case 'y':
         isQuad = true;
         break;
+    case 'f':
+        isCircleAlgo = !isCircleAlgo;
+        heightmap();
+        break;
     }
 }
 
@@ -408,8 +479,6 @@ int main(int argc, char **argv)
 
     glEnable(GL_DEPTH_TEST);
     init();
-
     glutMainLoop();
-
     return (0);
 }
