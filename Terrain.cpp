@@ -119,9 +119,6 @@ void resetHeightmap(void)
 
 void defineNormals()
 {
-    float v1[3];
-    float v2[3];
-    float v[3];
     float x1, y1, z1, x2, y2, z2, xc, yc, zc;
     for (int x = 0; x < terrainSize - 1; x++)
     {
@@ -491,7 +488,7 @@ void keyboard(unsigned char key, int xIn, int yIn)
 void FPS(int val)
 {
     glutPostRedisplay();
-    glutTimerFunc(0, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
+    glutTimerFunc(17, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
 }
 
 void init(void)
