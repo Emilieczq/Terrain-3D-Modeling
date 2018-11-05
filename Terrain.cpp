@@ -23,6 +23,7 @@ int angleY = -20;
 int angleZ = 0;
 const int SIZE = 100;         // terrain's size is 100 * 100
 float heights[SIZE][SIZE];    // [x][z], float value is the height (y) of the point (x, z)
+float heightsOverview[SIZE][SIZE];
 float normals[SIZE][SIZE][3]; // normal vertices
 bool definedHeights = false;
 float minHeight = 0;
@@ -214,6 +215,29 @@ void setVertex(int x, int z)
     glVertex3f(x, y, z);
 }
 
+void set2DVertex(int x, int z)
+{
+    float y = heights[x + SIZE / 2][z + SIZE / 2]; // y is height
+    float r, g, b;
+
+        float percent = (y - minHeight) / (maxHeight - minHeight);
+        if (percent > 0.5) // from yellow (low) to red (hight)
+        {
+            r = 1;
+            g = 1 - (percent - 0.5) * 2;
+            b = 0;
+        }
+        else // from green (low) to yellow (high)
+        {
+            r = percent * 2;
+            g = 1;
+            b = 0;
+        }
+        glColor3f(r, g, b);
+
+    glVertex2d(x, -z);
+}
+
 void drawTerrain(void)
 {
     if (isQuad)
@@ -242,6 +266,34 @@ void drawTerrain(void)
     glEnd();
 }
 
+void draw2DOverview(void)
+{
+    if (isQuad)
+        glBegin(GL_QUAD_STRIP);
+    else
+        glBegin(GL_TRIANGLE_STRIP);
+    for (int z = -SIZE / 2; z <= SIZE / 2 - 2; z++)
+    {
+        if (z % 2 == 0)
+        {
+            for (int x = -SIZE / 2; x <= SIZE / 2 - 1; x++)
+            {
+                set2DVertex(x, z);
+                set2DVertex(x, z + 1);
+            }
+        }
+        else
+        {
+            for (int x = SIZE / 2 - 1; x >= -SIZE / 2; x--)
+            {
+                set2DVertex(x, z + 1);
+                set2DVertex(x, z);
+            }
+        }
+    }
+    glEnd();
+}
+
 void printRotateInfo(void)
 {
     printf("[INFO]Rotate: X: %i, Y: %i, Z: %i\n", angleX, angleY, angleZ);
@@ -253,6 +305,10 @@ void display(void)
     glLoadIdentity();
     gluLookAt(camPos[0], camPos[1], camPos[2], 0, 0, 0, 0, 1, 0);
 
+    if (!definedHeights)
+    {
+        heightmap();
+    }
     /* LIGHTING */
     glPushMatrix();
     if (lightsOn)
@@ -267,17 +323,6 @@ void display(void)
         glLightfv(GL_LIGHT1, GL_DIFFUSE, diff1);
         glLightfv(GL_LIGHT1, GL_SPECULAR, spec1);
     }
-    glPopMatrix();
-    if (!definedHeights)
-    {
-        heightmap();
-    }
-    /* 3D Model */
-    glPushMatrix();
-    glRotatef(angleX, 1, 0, 0);
-    glRotatef(angleY, 0, 1, 0);
-    glRotatef(angleZ, 0, 0, 1);
-
     /* lighting */
     if (lightsOn)
     {
@@ -286,6 +331,16 @@ void display(void)
         glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, m_spec);
         glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shiny);
     }
+    glPopMatrix();
+    
+
+    /* 3D Model */
+    glPushMatrix();
+    glRotatef(angleX, 1, 0, 0);
+    glRotatef(angleY, 0, 1, 0);
+    glRotatef(angleZ, 0, 0, 1);
+
+    
 
     /* 3 modes */
     if (mode == 1)
@@ -312,6 +367,16 @@ void display(void)
     glutSwapBuffers();
 }
 
+void displayOverview(void)
+{
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    draw2DOverview();
+    glutSwapBuffers();
+}
+
 void reshape(int w, int h)
 {
     glMatrixMode(GL_PROJECTION);
@@ -321,6 +386,17 @@ void reshape(int w, int h)
 
     glMatrixMode(GL_MODELVIEW);
     glViewport(0, 0, w, h);
+}
+
+void reshapeOverview(int w, int h)
+{
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(-50, 50, -50, 50);
+    //gluPerspective(45, (float)((w + 0.0f) / h), 1, 1000);
+
+    // glMatrixMode(GL_MODELVIEW);
+    // glViewport(0, 0, w, h);
 }
 
 void mouse(int btn, int state, int x, int y)
@@ -364,7 +440,16 @@ void special(int key, int x, int y)
     }
     glutPostRedisplay();
 }
-
+void keyboardOverview(unsigned char key, int xIn, int yIn)
+{
+    switch (key)
+    {
+    case 'q':
+    case 27: // esc
+        exit(0);
+        break;
+    }
+}
 void keyboard(unsigned char key, int xIn, int yIn)
 {
     int mod = glutGetModifiers();
@@ -440,7 +525,7 @@ void keyboard(unsigned char key, int xIn, int yIn)
 void FPS(int val)
 {
     glutPostRedisplay();
-    glutTimerFunc(17, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
+    glutTimerFunc(0, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
 }
 
 void init(void)
@@ -453,15 +538,25 @@ void init(void)
     //glOrtho(-10, 10, -10, 10, -10, 10);
 }
 
+void initOverview(void)
+{
+    glClearColor(0, 0, 0, 0);
+    glColor3f(1, 1, 1);
+
+    glMatrixMode(GL_PROJECTION);
+    gluOrtho2D(-50, 50, -50, 50);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
 int main(int argc, char **argv)
 {
     glutInit(&argc, argv);
 
+    /* 3D Model */
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-
-    glutInitWindowSize(1000, 1000);
+    glutInitWindowSize(800, 800);
     glutInitWindowPosition(0, 0);
-
     glutCreateWindow("Terrain");
 
     glutDisplayFunc(display);
@@ -484,6 +579,20 @@ int main(int argc, char **argv)
 
     glEnable(GL_DEPTH_TEST);
     init();
+
+    /* 2D overview */
+    glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
+    glutInitWindowSize(300, 300);
+    glutInitWindowPosition(1000, 500);
+    glutCreateWindow("2D Overview");
+
+    glutDisplayFunc(displayOverview);
+    glutKeyboardFunc(keyboardOverview);
+    glutSpecialFunc(special);
+    glutReshapeFunc(reshapeOverview);
+    glutTimerFunc(0, FPS, 0);
+    initOverview();
+
     glutMainLoop();
     return (0);
 }
