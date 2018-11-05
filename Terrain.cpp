@@ -24,14 +24,14 @@ float camPos[] = {0, 0, 200};
 int angleX = 44;
 int angleY = -20;
 int angleZ = 0;
-const int SIZE = 100;         // terrain's size is 100 * 100
-float heights[SIZE][SIZE];    // [x][z], float value is the height (y) of the point (x, z)
-float normals[SIZE][SIZE][3]; // normal vertices
+const int terrainSize = 100;         // terrain's size is 100 * 100
+float heights[terrainSize][terrainSize];    // [x][z], float value is the height (y) of the point (x, z)
+float normals[terrainSize][terrainSize][3]; // normal vertices
 bool definedHeights = false;
 float minHeight = 0;
 float maxHeight = 0;
-const int ITERATIONS = 50;
-int circles[ITERATIONS][4]; // used for circle algorithm
+const int iterations = 50;
+int circles[iterations][4]; // used for circle algorithm
 int mode = 1;               // 1 = solid polygons; 2 = wireframe; 3 = solid polygons & wireframe
 bool isWireframe = false;   // used for mode 3 to draw wireframe
 bool lightsOn = true;       // true: turn on two lights; false: turn off lights
@@ -65,19 +65,19 @@ float shiny = 0.3;
 void randCircles()
 {
     srand(time(NULL));
-    for (int i = 0; i < ITERATIONS; i++) // 50 iterations
+    for (int i = 0; i < iterations; i++) // 50 iterations
     {
-        circles[i][0] = rand() % (SIZE - 1); // circle vertex x
-        circles[i][1] = rand() % (SIZE - 1); // circle vertex y
+        circles[i][0] = rand() % (terrainSize - 1); // circle vertex x
+        circles[i][1] = rand() % (terrainSize - 1); // circle vertex y
         circles[i][2] = rand() % 30 - 15;    // disp: random -15 ~ 15
         circles[i][3] = rand() % 10 + 10;    // terrainCircleSize random 10 ~ 20
     }
 }
 void circleAlgo(int xc, int zc, int disp, int terrainCircleSize)
 {
-    for (int x = 0; x <= SIZE - 1; x++)
+    for (int x = 1; x <= terrainSize - 1; x++)
     {
-        for (int z = 0; z <= SIZE - 1; z++)
+        for (int z = 1; z <= terrainSize - 1; z++)
         {
             float pd = sqrt(pow(xc - x, 2) + pow(zc - z, 2)) / terrainCircleSize;
             if (fabs(pd) <= 1.0)
@@ -94,12 +94,12 @@ void faultAlgo()
     for (int i = 0; i < 200; i++)
     {
         float r = static_cast<float>(rand());
-        float d = sqrt(SIZE * SIZE + SIZE * SIZE);
+        float d = sqrt(terrainSize * terrainSize + terrainSize * terrainSize);
         float c = (static_cast<float>(rand()) / static_cast<float>(RAND_MAX)) * d - d / 2;
 
-        for (int x = 0; x < SIZE; x++)
+        for (int x = 0; x < terrainSize; x++)
         {
-            for (int z = 0; z < SIZE; z++)
+            for (int z = 0; z < terrainSize; z++)
             {
                 if (sin(r) * x + cos(r) * z - c > 0)
                     heights[x][z]++;
@@ -112,8 +112,8 @@ void faultAlgo()
 
 void resetHeightmap(void)
 {
-    for (int x = 0; x <= SIZE - 1; x++)
-        for (int z = 0; z <= SIZE - 1; z++)
+    for (int x = 0; x <= terrainSize - 1; x++)
+        for (int z = 0; z <= terrainSize - 1; z++)
             heights[x][z] = 0;
 }
 
@@ -123,9 +123,9 @@ void defineNormals()
     float v2[3];
     float v[3];
     float x1, y1, z1, x2, y2, z2, xc, yc, zc;
-    for (int x = 0; x < SIZE; x++)
+    for (int x = 0; x < terrainSize - 1; x++)
     {
-        for (int z = 0; z < SIZE; z++)
+        for (int z = 0; z < terrainSize - 1; z++)
         {
             x1 = x + 1;
             y1 = heights[x + 1][z] - heights[x][z];
@@ -182,7 +182,7 @@ void heightmap(void)
 
 void setVertex(int x, int z)
 {
-    float y = heights[x + SIZE / 2][z + SIZE / 2]; // y is height
+    float y = heights[x + terrainSize / 2][z + terrainSize / 2]; // y is height
     float r, g, b;
     if (!isWireframe)
     {
@@ -205,13 +205,13 @@ void setVertex(int x, int z)
     {
         glColor3f(1, 1, 1); // white colour for wireframe in mode 3
     }
-    glNormal3fv(normals[x + SIZE / 2][z + SIZE / 2]); // Normals
+    glNormal3fv(normals[x + terrainSize / 2][z + terrainSize / 2]); // Normals
     glVertex3f(x, y, z);
 }
 
 void set2DVertex(int x, int z)
 {
-    float y = heights[x + SIZE / 2][z + SIZE / 2]; // y is height
+    float y = heights[x + terrainSize / 2][z + terrainSize / 2]; // y is height
     float r, g, b;
 
     float percent = (y - minHeight) / (maxHeight - minHeight);
@@ -238,11 +238,11 @@ void drawTerrain(void)
         glBegin(GL_QUAD_STRIP);
     else
         glBegin(GL_TRIANGLE_STRIP);
-    for (int z = -SIZE / 2; z <= SIZE / 2 - 2; z++)
+    for (int z = -terrainSize / 2; z <= terrainSize / 2 - 2; z++)
     {
         if (z % 2 == 0)
         {
-            for (int x = -SIZE / 2; x <= SIZE / 2 - 1; x++)
+            for (int x = -terrainSize / 2; x <= terrainSize / 2 - 1; x++)
             {
                 setVertex(x, z);
                 setVertex(x, z + 1);
@@ -250,7 +250,7 @@ void drawTerrain(void)
         }
         else
         {
-            for (int x = SIZE / 2 - 1; x >= -SIZE / 2; x--)
+            for (int x = terrainSize / 2 - 1; x >= -terrainSize / 2; x--)
             {
                 setVertex(x, z + 1);
                 setVertex(x, z);
@@ -266,11 +266,11 @@ void draw2DOverview(void)
         glBegin(GL_QUAD_STRIP);
     else
         glBegin(GL_TRIANGLE_STRIP);
-    for (int z = -SIZE / 2; z <= SIZE / 2 - 2; z++)
+    for (int z = -terrainSize / 2; z <= terrainSize / 2 - 2; z++)
     {
         if (z % 2 == 0)
         {
-            for (int x = -SIZE / 2; x <= SIZE / 2 - 1; x++)
+            for (int x = -terrainSize / 2; x <= terrainSize / 2 - 1; x++)
             {
                 set2DVertex(x, z);
                 set2DVertex(x, z + 1);
@@ -278,7 +278,7 @@ void draw2DOverview(void)
         }
         else
         {
-            for (int x = SIZE / 2 - 1; x >= -SIZE / 2; x--)
+            for (int x = terrainSize / 2 - 1; x >= -terrainSize / 2; x--)
             {
                 set2DVertex(x, z + 1);
                 set2DVertex(x, z);
@@ -519,14 +519,14 @@ void printGuide(void)
     std::cout << "#########################################################################\n"
               << "#                   Welcome to use this Terrain tool!                   #\n"
               << "#########################################################################\n"
-              << "There are two windows: one is 3D Model, the other is 2D overview."
-              << "Attention: to make 2D overview display correctly (refresh), you should select small window and press any key except q or esc."
-              << "Unfortunately, these two windows are not in synch. :(\n"
+              << "There are two windows: one is 3D Model, the other is 2D overview.\n"
+              << "**Attention** To show synchronized 2D overview, you should select the small window (Windows) or press any key except q or esc (MacOS).\n"
+              << "Unfortunately, the 2D overview is not synchronized immediately with 3D model. :(\n"
               << "-------------------------------------------------------------------------\n"
               << "A list of commands (you should select the big window at first):\n"
-              << "   ←/→  "
+              << "left/right"
               << "-> rotate the 3D model about y axis\n"
-              << "   q↑/↓  "
+              << "up/down   "
               << "-> rotate the 3D model about x axis\n"
               << "   a/d\t"
               << "-> rotate the 3D model about z axis\n"
@@ -537,11 +537,11 @@ void printGuide(void)
               << "     f\t"
               << "-> toggle current algorithm between circle algorithm and fault algorithm, the default algorithm is circle algorithm\n"
               << "     y\t"
-              << "-> draws the terrain using Quads (strips)\n"
+              << "-> draw the terrain using quads (strips)\n"
               << "     t\t"
-              << "-> draws the terrain using triangles (strips)\n"
+              << "-> draw the terrain using triangles (strips)\n"
               << "     w\t"
-              << "-> toggle wireframe mode between three options: 1. solid polygons; 2. wireframe; 3. solid polygons and wireframe\n"
+              << "-> toggle wireframe mode between three options: 1. solid polygons; 2. wireframe; 3. both solid polygons and wireframe\n"
               << "     l\t"
               << "-> turn on/off the lights\n"
               << "     s\t"
