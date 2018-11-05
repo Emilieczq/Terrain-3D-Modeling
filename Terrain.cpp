@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 #include <math.h>
 #include <time.h>
 
@@ -17,13 +18,14 @@
 #include <GL/freeglut.h>
 #endif
 
+using namespace std;
+
 float camPos[] = {0, 0, 200};
 int angleX = 44;
 int angleY = -20;
 int angleZ = 0;
 const int SIZE = 100;         // terrain's size is 100 * 100
 float heights[SIZE][SIZE];    // [x][z], float value is the height (y) of the point (x, z)
-float heightsOverview[SIZE][SIZE];
 float normals[SIZE][SIZE][3]; // normal vertices
 bool definedHeights = false;
 float minHeight = 0;
@@ -38,12 +40,12 @@ bool isQuad = true;         // true: wireframe is quad; false: triangle
 bool isCircleAlgo = true;   // true: use circle algorithm; false: use fault algorithm
 
 /* lighting 1 */
-float light_pos0[] = {150, -1000, 150, 1};
+float light_pos0[] = {50, -500, 50, 1};
 float amb0[] = {0.1, 0.1, 0.1, 1};
 float diff0[] = {0.8, 0.8, 0.8, 1};
 float spec0[] = {0.5, 0.5, 0.5, 1};
 /* lighting 2 */
-float light_pos1[] = {-150, -1000, -150, 1};
+float light_pos1[] = {-50, -500, -50, 1};
 float amb1[] = {0.1, 0.1, 0.1, 1};
 float diff1[] = {0.8, 0.8, 0.8, 1};
 float spec1[] = {0.5, 0.5, 0.5, 1};
@@ -79,9 +81,7 @@ void circleAlgo(int xc, int zc, int disp, int terrainCircleSize)
         {
             float pd = sqrt(pow(xc - x, 2) + pow(zc - z, 2)) / terrainCircleSize;
             if (fabs(pd) <= 1.0)
-            {
                 heights[x][z] += disp / 2 + cos(pd * 3.14) * disp / 2;
-            }
         }
     }
 }
@@ -102,13 +102,9 @@ void faultAlgo()
             for (int z = 0; z < SIZE; z++)
             {
                 if (sin(r) * x + cos(r) * z - c > 0)
-                {
                     heights[x][z]++;
-                }
                 else
-                {
                     heights[x][z]--;
-                }
             }
         }
     }
@@ -117,12 +113,8 @@ void faultAlgo()
 void resetHeightmap(void)
 {
     for (int x = 0; x <= SIZE - 1; x++)
-    {
         for (int z = 0; z <= SIZE - 1; z++)
-        {
             heights[x][z] = 0;
-        }
-    }
 }
 
 void defineNormals()
@@ -130,26 +122,27 @@ void defineNormals()
     float v1[3];
     float v2[3];
     float v[3];
+    float x1, y1, z1, x2, y2, z2, xc, yc, zc;
     for (int x = 0; x < SIZE; x++)
     {
         for (int z = 0; z < SIZE; z++)
         {
-            v1[0] = x + 1;
-            v1[1] = heights[x + 1][z] - heights[x][z];
-            v1[2] = z;
+            x1 = x + 1;
+            y1 = heights[x + 1][z] - heights[x][z];
+            z1 = z;
 
-            v2[0] = x + 1;
-            v2[1] = heights[x + 1][z + 1] - heights[x][z];
-            v2[2] = z + 1;
+            x2 = x + 1;
+            y2 = heights[x + 1][z + 1] - heights[x][z];
+            z2 = z + 1;
 
-            v[0] = v1[1] * v2[2] - v1[2] * v2[1];
-            v[1] = v1[2] * v2[0] - v1[0] * v2[2];
-            v[2] = v1[0] * v2[1] - v1[1] * v2[0];
-            float l = sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+            xc = y1 * z2 - z1 * y2;
+            yc = z1 * x2 - x1 * z2;
+            zc = x1 * y2 - y1 * x2;
+            float n = sqrtf(xc * xc + yc * yc + zc * zc);
 
-            normals[x][z][0] = v[0] / l;
-            normals[x][z][1] = v[1] / l;
-            normals[x][z][2] = v[2] / l;
+            normals[x][z][0] = xc / n;
+            normals[x][z][1] = yc / n;
+            normals[x][z][2] = zc / n;
         }
     }
 }
@@ -169,11 +162,9 @@ void heightmap(void)
     {
         faultAlgo();
     }
-    definedHeights = true; // to avoid the duplication of heightmap algorithm
-
-    defineNormals();
-
     /* define min height and max height*/
+    minHeight = 0;
+    maxHeight = 0;
     for (int i = 0; i < 50; i++)
     {
         for (int j = 0; j < 50; j++)
@@ -184,6 +175,9 @@ void heightmap(void)
                 maxHeight = heights[i][j];
         }
     }
+    definedHeights = true; // to avoid the duplication of heightmap algorithm
+
+    defineNormals();
 }
 
 void setVertex(int x, int z)
@@ -220,20 +214,20 @@ void set2DVertex(int x, int z)
     float y = heights[x + SIZE / 2][z + SIZE / 2]; // y is height
     float r, g, b;
 
-        float percent = (y - minHeight) / (maxHeight - minHeight);
-        if (percent > 0.5) // from yellow (low) to red (hight)
-        {
-            r = 1;
-            g = 1 - (percent - 0.5) * 2;
-            b = 0;
-        }
-        else // from green (low) to yellow (high)
-        {
-            r = percent * 2;
-            g = 1;
-            b = 0;
-        }
-        glColor3f(r, g, b);
+    float percent = (y - minHeight) / (maxHeight - minHeight);
+    if (percent > 0.5) // from yellow (low) to red (hight)
+    {
+        r = 1;
+        g = 1 - (percent - 0.5) * 2;
+        b = 0;
+    }
+    else // from green (low) to yellow (high)
+    {
+        r = percent * 2;
+        g = 1;
+        b = 0;
+    }
+    glColor3f(r, g, b);
 
     glVertex2d(x, -z);
 }
@@ -298,6 +292,7 @@ void printRotateInfo(void)
 {
     printf("[INFO]Rotate: X: %i, Y: %i, Z: %i\n", angleX, angleY, angleZ);
 }
+
 void display(void)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -310,7 +305,6 @@ void display(void)
         heightmap();
     }
     /* LIGHTING */
-    glPushMatrix();
     if (lightsOn)
     {
         glLightfv(GL_LIGHT0, GL_POSITION, light_pos0);
@@ -331,16 +325,11 @@ void display(void)
         glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, m_spec);
         glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shiny);
     }
-    glPopMatrix();
-    
 
     /* 3D Model */
-    glPushMatrix();
     glRotatef(angleX, 1, 0, 0);
     glRotatef(angleY, 0, 1, 0);
     glRotatef(angleZ, 0, 0, 1);
-
-    
 
     /* 3 modes */
     if (mode == 1)
@@ -362,14 +351,12 @@ void display(void)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         drawTerrain();
     }
-
-    glPopMatrix();
     glutSwapBuffers();
 }
 
 void displayOverview(void)
 {
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -395,16 +382,8 @@ void reshapeOverview(int w, int h)
     gluOrtho2D(-50, 50, -50, 50);
     //gluPerspective(45, (float)((w + 0.0f) / h), 1, 1000);
 
-    // glMatrixMode(GL_MODELVIEW);
-    // glViewport(0, 0, w, h);
-}
-
-void mouse(int btn, int state, int x, int y)
-{
-    if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
-    {
-        printf("left button, %i, %i\n", x, y);
-    }
+    glMatrixMode(GL_MODELVIEW);
+    glViewport(0, 0, w, h);
 }
 
 void special(int key, int x, int y)
@@ -414,28 +393,18 @@ void special(int key, int x, int y)
     case GLUT_KEY_RIGHT:
         if (angleY < 90)
             angleY += 2;
-        printRotateInfo();
         break;
     case GLUT_KEY_LEFT:
         if (angleY > -90)
-        {
             angleY -= 2;
-            printRotateInfo();
-        }
         break;
     case GLUT_KEY_DOWN:
         if (angleX < 90)
-        {
             angleX += 2;
-            printRotateInfo();
-        }
         break;
     case GLUT_KEY_UP:
         if (angleX > -90)
-        {
             angleX -= 2;
-            printRotateInfo();
-        }
         break;
     }
     glutPostRedisplay();
@@ -497,17 +466,11 @@ void keyboard(unsigned char key, int xIn, int yIn)
         break;
     case 'a':
         if (angleZ > -90)
-        {
             angleZ -= 2;
-            printRotateInfo();
-        }
         break;
     case 'd':
         if (angleZ < 90)
-        {
             angleZ += 2;
-            printRotateInfo();
-        }
         break;
     case 't':
         isQuad = false;
@@ -518,6 +481,9 @@ void keyboard(unsigned char key, int xIn, int yIn)
     case 'f':
         isCircleAlgo = !isCircleAlgo;
         heightmap();
+        break;
+    case 'i':
+        printRotateInfo();
         break;
     }
 }
@@ -535,7 +501,6 @@ void init(void)
 
     glMatrixMode(GL_PROJECTION);
     gluPerspective(45, 1, 1, 1000);
-    //glOrtho(-10, 10, -10, 10, -10, 10);
 }
 
 void initOverview(void)
@@ -549,8 +514,46 @@ void initOverview(void)
     glLoadIdentity();
 }
 
+void printGuide(void)
+{
+    std::cout << "#########################################################################\n"
+              << "#                   Welcome to use this Terrain tool!                   #\n"
+              << "#########################################################################\n"
+              << "There are two windows: one is 3D Model, the other is 2D overview."
+              << "Attention: to make 2D overview display correctly (refresh), you should select small window and press any key except q or esc."
+              << "Unfortunately, these two windows are not in synch. :(\n"
+              << "-------------------------------------------------------------------------\n"
+              << "A list of commands (you should select the big window at first):\n"
+              << "   ←/→  "
+              << "-> rotate the 3D model about y axis\n"
+              << "   q↑/↓  "
+              << "-> rotate the 3D model about x axis\n"
+              << "   a/d\t"
+              << "-> rotate the 3D model about z axis\n"
+              << "     i\t"
+              << "-> print current rotation info\n"
+              << "     r\t"
+              << "-> generate a new random terrain using current heightmap algorithm\n"
+              << "     f\t"
+              << "-> toggle current algorithm between circle algorithm and fault algorithm, the default algorithm is circle algorithm\n"
+              << "     y\t"
+              << "-> draws the terrain using Quads (strips)\n"
+              << "     t\t"
+              << "-> draws the terrain using triangles (strips)\n"
+              << "     w\t"
+              << "-> toggle wireframe mode between three options: 1. solid polygons; 2. wireframe; 3. solid polygons and wireframe\n"
+              << "     l\t"
+              << "-> turn on/off the lights\n"
+              << "     s\t"
+              << "-> toggle current shading between flat shading and Gouraud shading, the default shading is Gouraud shading\n"
+              << " q/esc\t"
+              << "-> close the windows\n"
+              << "################################# Terrain #################################" << std::endl;
+}
+
 int main(int argc, char **argv)
 {
+    printGuide();
     glutInit(&argc, argv);
 
     /* 3D Model */
