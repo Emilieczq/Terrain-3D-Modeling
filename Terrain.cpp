@@ -314,7 +314,6 @@ void display(void)
         glLightfv(GL_LIGHT1, GL_DIFFUSE, diff1);
         glLightfv(GL_LIGHT1, GL_SPECULAR, spec1);
     }
-    /* lighting */
     if (lightsOn)
     {
         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, m_amb);
@@ -323,7 +322,6 @@ void display(void)
         glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shiny);
     }
 
-    /* 3D Model */
     glRotatef(angleX, 1, 0, 0);
     glRotatef(angleY, 0, 1, 0);
     glRotatef(angleZ, 0, 0, 1);
@@ -488,7 +486,7 @@ void keyboard(unsigned char key, int xIn, int yIn)
 void FPS(int val)
 {
     glutPostRedisplay();
-    glutTimerFunc(17, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
+    glutTimerFunc(0, FPS, 0); // 1sec = 1000, 60fps = 1000/60 = ~17
 }
 
 void init(void)
