@@ -1,6 +1,8 @@
 # Terrain Modeling (OpenGl/GLUT)
 This is a graphic program using C++ and OpenGL to produce and display an interactive terrain mesh.
 
+![](terrain.gif)
+
 ## Features
 There are two display windows: one is 3D Model, the other is 2D overview.
 **Attention** To show sysnchronized 2D overview, you should select the small window (Windows) or press any key except q or esc (MacOS).
