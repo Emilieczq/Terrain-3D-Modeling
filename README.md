@@ -1,11 +1,12 @@
 # Terrain Modeling (OpenGl/GLUT)
 This is a graphic program using C++ and OpenGL to produce and display an interactive terrain mesh.
-
-![](terrain.gif)
+<p align="center">
+  <img src="terrain.gif"/>
+</p>
 
 ## Features
-There are two display windows: one is 3D Model, the other is 2D overview.
-**Attention** To show sysnchronized 2D overview, you should select the small window (Windows) or press any key except q or esc (MacOS).
+- There are two display windows: one is 3D Model, the other is 2D overview (not synchronized). 
+- This system includes two heightmap algorithm: circle algorithm and fault algorithm. (reference: http://www.lighthouse3d.com/opengl/terrain/index.php?circles)
 
 ## Instruction
 Under the path of makefile, use the command `make` to start the program.
@@ -25,4 +26,4 @@ Under the path of makefile, use the command `make` to start the program.
 | q/esc | close the windows |
 
 ## Remarks
-- Unfortunately, the 2D overview is not synchronized immediately with the 3D model.
+- Unfortunately, the 2D overview is not synchronized immediately with the 3D model. **Attention:** To show sysnchronized 2D overview, you should select the small window (Windows) or press any key except q or esc (MacOS).
