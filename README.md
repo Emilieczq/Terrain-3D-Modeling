@@ -12,7 +12,7 @@ This is a graphic program using C++ and OpenGL to produce and display an interac
 Under the path of makefile, use the command `make` to start the program.
 
 | Commands | Functions |
-|----------:|-----------|
+|:----------:|-----------|
 | LEFT/RIGHT | rotate the 3D model about y axis |
 | a/d | rotate the 3D model about x axis |
 | i | print current rotation info |
